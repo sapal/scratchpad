@@ -37,25 +37,36 @@
   <body>
     <div id="message">
       <h2>Links</h2>
-      <h1>Existing links</h1>
-      <ul id="links">
-      </ul>
-      <h1>Create new link</h1>
-      <div>
-        <p>Name: <input id="name" type="text"/></p>
-        <p>URL: <input id="url" type="text"/></p>
-        <p><input id="create" type="button" value="Create new link"/></p>
+      <div id="existing-links">
+        <h1>Existing links</h1>
+        <ul id="links">
+        </ul>
+      </div>
+      <div id="create-form">
+        <h1>Create new link</h1>
+        <div>
+          <p>Name: <input id="name" type="text"/></p>
+          <p>URL: <input id="url" type="text"/></p>
+          <p><input id="create" type="button" value="Create new link"/></p>
+        </div>
       </div>
     </div>
     <p id="load">Firebase SDK Loading&hellip;</p>
     <div id="firebaseui-auth-container" style="display:none"></div>
     <input id="sign-out" type="button" value="Sign out" style="display:none"></input>
     <script>
+      const addLinkFormEl = document.getElementById('create-form');
+      const existingLinksEl = document.getElementById('existing-links');
+      const linksContainer = document.getElementById('links');
       function hide(el) {
         el.style.display = "none";
       }
       function show(el) {
         el.style.display = "block";
+      }
+      function currentUid() {
+        const auth = firebase.auth();
+        return auth && auth.currentUser && auth.currentUser.uid;
       }
       function initializeAuth() {
         const signOutEl = document.getElementById('sign-out');
@@ -63,16 +74,22 @@
         const ui = new firebaseui.auth.AuthUI(firebase.auth());
         firebase.auth().onAuthStateChanged((user) => {
           if (user) {
-            // User is signed in, see docs for a list of available properties
-            // https://firebase.google.com/docs/reference/js/firebase.User
-            var uid = user.uid;
-            console.log(`Signed in user: ${uid}`);
+            console.log(`Signed in user: ${user.uid}`);
             hide(authUiEl);
             show(signOutEl);
+            show(addLinkFormEl);
+            show(existingLinksEl);
+
+            listLinks();
           } else {
             console.log('No signed in user');
             show(authUiEl);
             hide(signOutEl);
+            hide(addLinkFormEl);
+            hide(existingLinksEl);
+
+            clearLinks();
+
             // Initialize the FirebaseUI Widget using Firebase.
             ui.start('#firebaseui-auth-container', {
               signInOptions: [
@@ -84,6 +101,7 @@
                 }
               }
             });
+
           }
         });
         signOutEl.addEventListener('click', function() {
@@ -113,7 +131,11 @@
         document.getElementById('create').addEventListener('click', function() {
           const name = document.getElementById('name').value;
           const url = document.getElementById('url').value;
-          db.collection('links').doc(name).set({url: url}).then((docRef) => {
+          db.collection('links').doc(name).set({
+            url: url,
+            owner: currentUid()
+          })
+          .then((docRef) => {
             console.log("Link ", url, " written with ID: ", name);
             window.location.reload()
           })
@@ -123,22 +145,27 @@
         });
       }
       function listLinks() {
-        const db = firebase.firestore();
-        const linksContainer = document.getElementById('links');
-        db.collection("links").get().then((querySnapshot) => {
-          querySnapshot.forEach((doc) => {
-            const item = document.createElement('li');
-            const data = doc.data();
-            item.textContent = `${doc.ref.id}  ->  ${data.url}`;
-            linksContainer.appendChild(item);
+        const uid = currentUid();
+        if (uid) {
+          const db = firebase.firestore();
+          db.collection("links").where("owner", "==", uid).get().then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {
+              const item = document.createElement('li');
+              const data = doc.data();
+              item.textContent = `${doc.ref.id}  ->  ${data.url}`;
+              linksContainer.appendChild(item);
+            });
           });
-        });
+        }
+      }
+      function clearLinks() {
+        linksContainer.innerHTML = '';
+
       }
       document.addEventListener('DOMContentLoaded', function() {
         initializeFirebase();
         initializeAuth();
         initializeAddLink();
-        listLinks();
       });
 
     </script>
