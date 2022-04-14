@@ -15,6 +15,10 @@
     -->
     <script defer src="/__/firebase/init.js?useEmulator=true"></script>
 
+    <!--authentication-->
+    <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
+
     <style media="screen">
       body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
       #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
@@ -44,7 +48,8 @@
       </div>
     </div>
     <p id="load">Firebase SDK Loading&hellip;</p>
-
+    <div id="firebaseui-auth-container" style="display:none"></div>
+    <input id="sign-out" type="button" value="Sign out" style="display:none"></input>
     <script>
       document.addEventListener('DOMContentLoaded', function() {
         const loadEl = document.querySelector('#load');
@@ -74,6 +79,38 @@
           console.error(e);
           loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
         }
+        // Initialize the FirebaseUI Widget using Firebase.
+        var ui = new firebaseui.auth.AuthUI(firebase.auth());
+        ui.start('#firebaseui-auth-container', {
+          signInOptions: [
+            firebase.auth.EmailAuthProvider.PROVIDER_ID
+          ],
+          callbacks: {
+            signInSuccessWithAuthResult: function(authResult, redirectUrl) {
+              return false;
+            }
+          }
+        });
+        firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            // User is signed in, see docs for a list of available properties
+            // https://firebase.google.com/docs/reference/js/firebase.User
+            var uid = user.uid;
+            console.log(`Signed in user: ${uid}`);
+            document.getElementById('firebaseui-auth-container').style.display = "none";
+            document.getElementById('sign-out').style.display = "block";
+          } else {
+            document.getElementById('firebaseui-auth-container').style.display = "block";
+            document.getElementById('sign-out').style.display = "none";
+          }
+        });
+        document.getElementById('sign-out').addEventListener('click', function() {
+          firebase.auth().signOut().then(() => {
+            console.log('Signed out');
+          }).catch((error) => {
+            console.log(`Error signing out: ${error}`);
+          });
+        });
         const db = firebase.firestore();
         document.getElementById('create').addEventListener('click', function() {
           const name = document.getElementById('name').value;
