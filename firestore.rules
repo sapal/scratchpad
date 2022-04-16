@@ -4,7 +4,13 @@ service cloud.firestore {
     match /links/{link} {
       allow get: if true;
       allow create: if request.auth != null;
-      allow update, delete, list: if request.auth != null && request.auth.uid == resource.data.owner;
+      allow update, delete, list: if (
+          request.auth != null
+          && request.auth.uid == resource.data.owner
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verified == true);
+    }
+    match /users/{user} {
+      allow get: if true;
     }
   }
 }
