@@ -21,39 +21,90 @@
 
     <style media="screen">
       body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
+      #content { background: white; max-width: 600px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 4px; }
+      #content h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
+      #content h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
+      #content p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
+      #content { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
       #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
       @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
+        body, #content { margin-top: 0; background: white; box-shadow: none; }
         body { border-top: 16px solid #ffa100; }
+      }
+      #login-info {
+        margin-top: 0;
+        padding: 24px;
+        padding-bottom:32px;
+        background-color: #ffa100;
+        border-color: white;
+        font-size:16px;
+        color: white; 
+      }
+      #username {
+        font-weight: bold; 
+      }
+      .button {
+        display: inline-block;
+        padding: 8px;
+        border-radius: 4px;
+        border-width: 0;
+        outline: none;
+      }
+      #sign-out {
+        float: right;
+        background: white;
+        border-color: white;
+      }
+      #sign-out:hover {
+        background: #ddd;
+      }
+      .text-input {
+        display: block;
+      }
+      #create {
+        background: #ffa100;
+        border-color: #ffa100;
+      }
+      #create:hover {
+        background: #ffc100;
+      }
+      a {
+        text-decoration: none;
+        color: #ffa100;
+      }
+      a:hover {
+        color: #ffc100;
+      }
+      ul {
+          list-style-type: "☞ ";
+      }
+      li::marker {
+        font-size: 20px;
       }
     </style>
   </head>
   <body>
-    <div id="message">
-      <h2>Link Admin</h2>
+    <div id="login-info" style="display:none">
+      Logged in as <span id="username"></span>
+      <input id="sign-out" class="button" type="button" value="Sign out"></input>
+    </div>
+    <div id="content">
+      <h1>Link Admin</h1>
+      <div id="firebaseui-auth-container" style="display:none"></div>
+      <div id="create-form">
+        <h2>Create/update link</h2>
+        <div>
+          <p>Name: <input class="text-input" id="name" type="text"/></p>
+          <p>URL: <input class="text-input" id="url" type="text"/></p>
+          <p><input id="create" class="button" type="button" value="Create/update"/></p>
+        </div>
+      </div>
       <div id="existing-links">
-        <h1>Your links</h1>
+        <h2>Your links</h2>
         <ul id="links">
         </ul>
       </div>
-      <div id="create-form">
-        <h1>Create/update link</h1>
-        <div>
-          <p>Name: <input id="name" type="text"/></p>
-          <p>URL: <input id="url" type="text"/></p>
-          <p><input id="create" type="button" value="Create new link"/></p>
-        </div>
-      </div>
     </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
-    <div id="firebaseui-auth-container" style="display:none"></div>
-    <input id="sign-out" type="button" value="Sign out" style="display:none"></input>
     <script>
       const addLinkFormEl = document.getElementById('create-form');
       const existingLinksEl = document.getElementById('existing-links');
@@ -69,6 +120,8 @@
         return auth && auth.currentUser && auth.currentUser.uid;
       }
       function initializeAuth() {
+        const loginInfoEl = document.getElementById('login-info');
+        const usernameEl = document.getElementById('username');
         const signOutEl = document.getElementById('sign-out');
         const authUiEl = document.getElementById('firebaseui-auth-container');
         const ui = new firebaseui.auth.AuthUI(firebase.auth());
@@ -76,18 +129,20 @@
           if (user) {
             console.log(`Signed in user: ${user.uid}`);
             hide(authUiEl);
-            show(signOutEl);
+            show(loginInfoEl);
             show(addLinkFormEl);
             show(existingLinksEl);
 
+            usernameEl.textContent = user.displayName;
             listLinks();
           } else {
             console.log('No signed in user');
             show(authUiEl);
-            hide(signOutEl);
+            hide(loginInfoEl);
             hide(addLinkFormEl);
             hide(existingLinksEl);
 
+            usernameEl.textContent = '';
             clearLinks();
 
             // Initialize the FirebaseUI Widget using Firebase.
@@ -116,14 +171,8 @@
         const loadEl = document.querySelector('#load');
         try {
           let app = firebase.app();
-          let features = [
-            'auth', 
-            'firestore',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
         } catch (e) {
           console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
         }
       }
       function initializeAddLink() {
@@ -154,8 +203,15 @@
           db.collection("links").where("owner", "==", uid).get().then((querySnapshot) => {
             querySnapshot.forEach((doc) => {
               const item = document.createElement('li');
+              const anchor = document.createElement('a');
               const data = doc.data();
-              item.textContent = `${doc.ref.id}  ->  ${data.url}`;
+              anchor.href = data.url;
+              anchor.textContent = doc.ref.id;
+              item.appendChild(anchor);
+              item.appendChild(document.createTextNode(' ⟶  '));
+              const urlEl = document.createElement('tt');
+              urlEl.textContent = data.url;
+              item.appendChild(urlEl);
               linksContainer.appendChild(item);
             });
           });
