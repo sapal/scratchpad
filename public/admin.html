@@ -36,14 +36,14 @@
   </head>
   <body>
     <div id="message">
-      <h2>Links</h2>
+      <h2>Link Admin</h2>
       <div id="existing-links">
-        <h1>Existing links</h1>
+        <h1>Your links</h1>
         <ul id="links">
         </ul>
       </div>
       <div id="create-form">
-        <h1>Create new link</h1>
+        <h1>Create/update link</h1>
         <div>
           <p>Name: <input id="name" type="text"/></p>
           <p>URL: <input id="url" type="text"/></p>
@@ -130,13 +130,16 @@
         const db = firebase.firestore();
         document.getElementById('create').addEventListener('click', function() {
           const name = document.getElementById('name').value;
-          const url = document.getElementById('url').value;
+          let url = document.getElementById('url').value;
+          if(!/^((http|https):\/\/)/.test(url)) {
+            url = "https://" + url;
+          }
           db.collection('links').doc(name).set({
             url: url,
             owner: currentUid()
           })
           .then((docRef) => {
-            console.log("Link ", url, " written with ID: ", name);
+            console.log(`Link ${name} for ${url} written.`);
             window.location.reload()
           })
           .catch((error) => {
@@ -160,7 +163,6 @@
       }
       function clearLinks() {
         linksContainer.innerHTML = '';
-
       }
       document.addEventListener('DOMContentLoaded', function() {
         initializeFirebase();

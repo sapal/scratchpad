@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Link</title>
+    <script defer src="/__/firebase/9.6.10/firebase-app-compat.js"></script>
+    <script defer src="/__/firebase/9.6.10/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+  </head>
+  <body>
+    <p id="message"><p>
+    <script>
+      const messageEl = document.getElementById('message');
+      function initializeFirebase() {
+        try {
+          let app = firebase.app();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      function redirect() {
+        const db = firebase.firestore();
+        const splitPath = window.location.pathname.split('/')
+        const linkName = splitPath[1];
+        console.log(`linkName: ${linkName}`);
+        db.collection("links").doc(linkName).get().then((doc) => {
+          const data = doc.data();
+          if (!data) {
+            messageEl.textContent = `No link ${linkName}`;
+            return;
+          }
+          const remainingPath = splitPath.slice(2).join('/');
+          const search = window.location.search;
+          const hash = window.location.hash;
+          const newURL = doc.data().url +
+              (remainingPath ? '/' + remainingPath : '') +
+              (search || '') +
+              (hash || '');
+          messageEl.textContent = `Navigating to ${newURL}`;
+          window.location.replace(newURL);
+        }).catch((e) => {messageEl.textContent = `Error getting link ${linkName}: ${e}`;});
+      }
+      document.addEventListener('DOMContentLoaded', function() {
+        initializeFirebase();
+        redirect();
+      });
+    </script>
+  </body>
+</html>
